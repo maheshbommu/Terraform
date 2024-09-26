@@ -1,0 +1,98 @@
+---
+- name: install nopcommerce
+  hosts: all
+  become: true
+  tasks:
+    - name:
+      ansible.builtin.command: wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+    
+    - name: update apt cache and install dotnet-sdk-8.0
+      ansible.builtin.apt:
+        name: dotnet-sdk-8.0
+        update_cache: true
+        state: present
+
+    - name: install nginx
+      ansible.builtin.apt: 
+         name: nginx
+         update_cache: true
+         state: present
+
+    - name: start nginx
+      ansible.builtin.service:
+          name: nginx
+          state: started
+    
+    - name: Nginx is running
+      ansible.builtin.systemd_service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: configure nginx as a reverse proxy to forward requests to your ASP.NET Core app
+      ansible.builtin.template: 
+        src: /home/devops/service.j2
+        dest: /etc/nginx/sites-available/default
+        mode: 0755
+
+    - name: make directory for nginx
+      ansible.builtin.file:
+        path: /var/www/nopCommerce
+        state: directory 
+        mode: 0755
+
+    - name: Create /var/www/nopCommerce directory
+      ansible.builtin.file:
+        path: /var/www/nopCommerce
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: 0755
+
+    - name: download zipfile of nopecommerce
+      ansible.builtin.command: sudo wget https://github.com/nopSolutions/nopCommerce/releases/download/release-4.70.4/nopCommerce_4.70.4_NoSource_linux_x64.zip
+
+    - name: install unzip
+      ansible.builtin.apt:
+        name: unzip
+        update_cache: true
+        state: present
+
+    - name: unzip nopecommerce
+      ansible.builtin.unarchive:
+        src: https://github.com/nopSolutions/nopCommerce/releases/download/release-4.70.4/nopCommerce_4.70.4_NoSource_linux_x64.zip
+        dest: /var/www/nopCommerce
+        remote_src: yes
+      
+    - name: Create bin and logs 
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: 0755
+      loop:
+        - /var/www/nopCommerce/bin
+        - /var/www/nopCommerce/logs
+
+    - name: change owner permissions 
+      ansible.builtin.file:
+        path: /var/www/nopCommerce
+        mode: o+r,g+r
+
+    - name: nopcommerce service file
+      ansible.builtin.template: 
+        src: /home/devops/nopcommerce.j2
+        dest: /etc/systemd/system/nopCommerce.service
+        mode: 0755
+
+    - name: Start and enable nopCommerce service
+      ansible.builtin.systemd:
+        name: nopCommerce.service
+        state: started
+        enabled: yes
+
+    - name: Restart Nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: restarted
