@@ -2,7 +2,7 @@ resource "random_id" "bucket_id" {
   byte_length = 8
 }
 
-resource "aws_s3_bucket" "example" {
+resource "aws_s3_bucket" "one" {
   bucket = "terraform-s3-bucket-${random_id.bucket_id.hex}"
 }
 
@@ -20,7 +20,7 @@ resource "aws_db_instance" "my_rds" {
   engine_version = "8.0.39"
   allocated_storage = 20
   username          = "admin"
-  password          = "yourpassword"
+  password          = "mahesh@123"
 
 
   tags = {
